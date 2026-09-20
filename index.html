@@ -651,6 +651,25 @@
     fits(lo);
   }
 
+  function fitWheelAndPool(wrap, wheelWrap, poolRow){
+    // Gleiches Problem wie bei der Bonbontuete: eine feste vh-Obergrenze kennt nicht den tatsaechlich
+    // uebrigen Platz (z.B. bei zweizeiligem Aufgabentext auf schmalen Bildschirmen), wodurch das Rad
+    // die Figuren-Reihe komplett aus dem sichtbaren/geclippten Bereich draengen konnte.
+    wheelWrap.style.removeProperty('width');
+    wheelWrap.style.removeProperty('height');
+    wheelWrap.style.removeProperty('max-height');
+    const totalH = wrap.clientHeight;
+    const totalW = wrap.clientWidth;
+    if(totalH<=0 || totalW<=0) return;
+    const poolH = poolRow.getBoundingClientRect().height || 60;
+    const gapPx = parseFloat(getComputedStyle(wrap).rowGap) || 0;
+    let availH = totalH - poolH - gapPx;
+    if(availH < 70) availH = Math.max(70, totalH*0.5); // Sicherheitsnetz bei extrem wenig Platz
+    let size = Math.min(availH, totalW*0.7, 290); // quadratisch (aspect-ratio:1), zusaetzlich per Breite gedeckelt
+    wheelWrap.style.width = size + 'px';
+    wheelWrap.style.height = size + 'px';
+  }
+
   function fitBagAndPool(wrap, bagWrap, poolRow){
     // Tuete und Bonbon-Vorrat muessen IMMER gemeinsam in den verfuegbaren Platz passen - sonst wird
     // der Vorrat vom umgebenden overflow:hidden verdeckt (unsichtbar, obwohl er im DOM existiert).
@@ -1058,6 +1077,7 @@
       wrap.appendChild(wheelWrap);
       wrap.appendChild(poolRow);
       els.taskBody.appendChild(wrap);
+      fitWheelAndPool(wrap, wheelWrap, poolRow);
     }
 
     else if(task.game === 'blitz'){
