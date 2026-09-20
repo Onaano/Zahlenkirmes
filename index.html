@@ -617,6 +617,29 @@
     return pick(styles);
   }
 
+  function fitBagAndPool(wrap, bagWrap, poolRow){
+    // Tuete und Bonbon-Vorrat muessen IMMER gemeinsam in den verfuegbaren Platz passen - sonst wird
+    // der Vorrat vom umgebenden overflow:hidden verdeckt (unsichtbar, obwohl er im DOM existiert).
+    // Eine feste vh-Obergrenze reicht nicht, da andere Elemente (z.B. zweizeiliger Aufgabentext auf
+    // schmalen Bildschirmen) unterschiedlich viel Platz beanspruchen koennen - deshalb hier den
+    // tatsaechlich uebrigen Platz messen und Breite+Hoehe der Tuete explizit danach berechnen.
+    bagWrap.style.removeProperty('max-height');
+    bagWrap.style.removeProperty('width');
+    bagWrap.style.removeProperty('height');
+    const totalH = wrap.clientHeight;
+    const totalW = wrap.clientWidth;
+    if(totalH<=0 || totalW<=0) return;
+    const poolH = poolRow.getBoundingClientRect().height || 60;
+    const gapPx = parseFloat(getComputedStyle(wrap).rowGap) || 0;
+    let availH = totalH - poolH - gapPx;
+    if(availH < 50) availH = Math.max(50, totalH*0.45); // Sicherheitsnetz bei extrem wenig Platz
+    let w = availH * 3/4; // 3:4-Seitenverhaeltnis beibehalten
+    const maxWByCss = Math.min(totalW*0.56, 270);
+    if(w > maxWByCss){ w = maxWByCss; availH = w*4/3; }
+    bagWrap.style.width = w + 'px';
+    bagWrap.style.height = availH + 'px';
+  }
+
   function autoFitQty(container){
     // Grundeinheit automatisch so gross wie moeglich waehlen, ohne Ueberlauf -
     // misst Kind-Elemente direkt (scrollHeight/Width koennen nie kleiner als clientHeight/Width werden).
@@ -886,6 +909,7 @@
       wrap.appendChild(bagWrap);
       wrap.appendChild(poolRow);
       els.taskBody.appendChild(wrap);
+      fitBagAndPool(wrap, bagWrap, poolRow);
     }
 
     else if(task.game === 'enten'){
