@@ -223,7 +223,7 @@
   .pool-row{ display:flex; gap:2vw; flex-wrap:wrap; justify-content:center; }
   .candy-btn{ font-size:clamp(26px,4.4vw,40px); transition:transform .1s ease; }
   .candy-btn:active{ transform:scale(.85); }
-  .bag-item{ font-size:clamp(22px,3.6vw,32px); cursor:pointer; }
+  .bag-item{ font-size:var(--candy-size, clamp(22px,3.6vw,32px)); cursor:pointer; }
 
   /* --- Riesenrad --- */
   .wheel-wrap{ position:relative; width:min(70%,290px,36vh); aspect-ratio:1; flex-shrink:1; }
@@ -462,6 +462,14 @@
     return 5;
   }
 
+  function candyGridCols(count){
+    // Die Tuete ist schmal - hier bewusst nur 2 oder 3 Spalten, nie mehr, damit alle bereits
+    // eingepackten Bonbons vollstaendig sichtbar bleiben statt seitlich abgeschnitten zu werden.
+    if(count<=1) return 1;
+    if(count<=4) return 2;
+    return 3;
+  }
+
   const DUCK_SVG = '<svg viewBox="0 0 40 32" class="qty-duck"><ellipse cx="17" cy="21" rx="16" ry="10.5" fill="#f9c934"/><ellipse cx="17" cy="21" rx="16" ry="10.5" fill="none" stroke="#d9a622" stroke-width="1"/><circle cx="29" cy="11" r="8.5" fill="#f9c934"/><circle cx="29" cy="11" r="8.5" fill="none" stroke="#d9a622" stroke-width="1"/><path d="M36,10.5 L45,8.5 L45,14 Z" fill="#f0812e"/><circle cx="32" cy="8.5" r="1.4" fill="#2a2340"/></svg>';
 
   function renderFreeItems(container, n, emoji){
@@ -615,6 +623,32 @@
     if(allowDice && n>=1 && n<=6) styles.push('dice','dice');
     if(n>5) return pick(['structured','tenframe','fingers']);
     return pick(styles);
+  }
+
+  function autoFitCandyGrid(bagWindow){
+    // Garantiert, dass ALLE bereits eingepackten Bonbons im Sichtfenster sichtbar bleiben (nie
+    // seitlich oder oben abgeschnitten) - wichtig, damit Kinder nachzaehlen koennen statt zu raten.
+    bagWindow.style.removeProperty('--candy-size');
+    const maxH = bagWindow.clientHeight;
+    const maxW = bagWindow.clientWidth;
+    if(maxH<=0 || maxW<=0) return;
+    const grid = bagWindow.querySelector('.bag-grid');
+    if(!grid || !grid.firstElementChild) return;
+    const defaultSize = parseFloat(getComputedStyle(grid.firstElementChild).fontSize) || 28;
+    function fits(px){
+      bagWindow.style.setProperty('--candy-size', px + 'px');
+      const gr = grid.getBoundingClientRect();
+      return gr.height <= maxH*0.92 && gr.width <= maxW*0.92;
+    }
+    if(fits(defaultSize)) return;
+    const minSize = 12;
+    if(!fits(minSize)) return;
+    let lo=minSize, hi=defaultSize;
+    for(let i=0;i<16;i++){
+      const mid=(lo+hi)/2;
+      if(fits(mid)) lo=mid; else hi=mid;
+    }
+    fits(lo);
   }
 
   function fitBagAndPool(wrap, bagWrap, poolRow){
@@ -889,11 +923,14 @@
             bi.remove();
             taskSelection.count--;
             poolRow.appendChild(makeCandyBtn());
+            bagGrid.style.gridTemplateColumns = `repeat(${candyGridCols(taskSelection.count)}, auto)`;
             els.btnFertig.disabled = taskSelection.count<=0;
+            autoFitCandyGrid(bagWindow);
           });
-          bagGrid.style.gridTemplateColumns = `repeat(${gridCols(taskSelection.count)}, auto)`;
+          bagGrid.style.gridTemplateColumns = `repeat(${candyGridCols(taskSelection.count)}, auto)`;
           bagGrid.appendChild(bi);
           els.btnFertig.disabled = false;
+          autoFitCandyGrid(bagWindow);
         });
       }
 
